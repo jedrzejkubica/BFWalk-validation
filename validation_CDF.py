@@ -22,6 +22,7 @@ import argparse
 import pathlib
 import logging
 
+import scipy
 import statistics
 import numpy
 import networkx
@@ -199,6 +200,23 @@ def plot_CDF(BFWalk_curve, BFWalk_AUC, random_curve, network_size, out="CDF.png"
     logger.info(f"CDF curve saved to {out}")
 
 
+def format_pvalue(pvalue):
+    """
+    Returns a p-value in the scientific notation, eg. p < 0.05*
+    """
+    p = '{:.2e}'.format(pvalue)
+
+    if pvalue <= 0.0001:
+        return "p < 10^-4****"
+    elif pvalue <= 0.001:
+        return "p < 10^-3***"
+    elif pvalue <= 0.01:
+        return "p < 0.01**"
+    elif pvalue <= 0.05:
+        return "p < 0.05*"    
+    return f"p = {p}"
+
+
 def main(network_file, BFWalk_ranks_file, multixrank_ranks_file=None, netcore_LOO_dir=None,
          cdf_path=None, weighted=False, directed=False):
     
@@ -252,6 +270,14 @@ def main(network_file, BFWalk_ranks_file, multixrank_ranks_file=None, netcore_LO
 
     random_ranks = generate_random_ranks(len(BFWalk_node2rank), len(node2idx))
     (random_curve, random_AUC) = ranks_to_curve(random_ranks, len(node2idx))
+
+    # "Are BFWalk ranks higher than MultiXrank ranks?"
+    p_value_BFWalk_vs_multixrank = scipy.stats.wilcoxon(list(multixrank_node2rank.values()), list(BFWalk_node2rank.values()), alternative="greater").pvalue
+    logger.info(f"p-value (ranks BFWalk vs MultiXrank): {format_pvalue(p_value_BFWalk_vs_multixrank)}")
+
+    # "Are BFWalk ranks higher than NetCore ranks?"
+    p_value_BFWalk_vs_netcore = scipy.stats.wilcoxon(list(netcore_node2rank.values()), list(BFWalk_node2rank.values()), alternative="greater").pvalue
+    logger.info(f"p-value (ranks BFWalk vs NetCore): {format_pvalue(p_value_BFWalk_vs_netcore)}")
 
     cdf_path.parent.mkdir(parents=True, exist_ok=True)  # Path.parent of a bare filename returns Path("."), and mkdir on "."
     plot_CDF(BFWalk_curve=BFWalk_curve,

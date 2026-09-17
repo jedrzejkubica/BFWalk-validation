@@ -18,6 +18,7 @@
 
 import os
 import sys
+import math
 import argparse
 import pathlib
 import logging
@@ -40,15 +41,20 @@ def main(figures, out_figure="fig_all.png"):
     for i in range(len(figures)):
         labels.append(f"({chr(97 + i)})")  # (a), (b), (c), (d)...
 
-    rows = 2
-    cols = len(figures) // 2
-    fig, axes = matplotlib.pyplot.subplots(rows, cols, figsize=(cols * 6, rows * 4.5))
+    if len(figures) == 2:
+        rows, cols = 1, 2
+    else:
+        rows = 2
+        cols = max(1, math.ceil(len(figures) / rows))
 
-    for ax, path, label in zip(axes.ravel(), figures, labels):
+    fig, axes = matplotlib.pyplot.subplots(rows, cols, figsize=(cols * 6, rows * 4.5))
+    axes_flat = axes.ravel() if hasattr(axes, "ravel") else [axes]
+
+    for ax, path, label in zip(axes_flat, figures, labels):
         img = matplotlib.image.imread(path)
         ax.imshow(img)
         ax.axis("off")
-        
+
         ax.text(
             0.02, 0.95, label,
             transform=ax.transAxes,
@@ -56,6 +62,9 @@ def main(figures, out_figure="fig_all.png"):
             fontweight="normal",
             va="top", ha="left"
         )
+
+    for ax in axes_flat[len(figures):]:
+        ax.axis("off")
 
     matplotlib.pyplot.subplots_adjust(wspace=0, hspace=0)
     matplotlib.pyplot.savefig(out_figure, bbox_inches="tight", dpi=1000)

@@ -75,19 +75,19 @@ def parse_uniprot(uniprot_file):
     return(uniprot2_gene)
 
 
-def parse_expression_data(expression_data):
+def parse_expression_data(expression_data, tissue):
     """
-    Parses a TSV file created from the Ensembl Expression Atlas (v104),
-    skips the first lines with comments (starting with "#"),
-    each row is a gene, the second column has been added manually (e.g. "BREAST_RATIO")
-    with calculated tissue enrichment of each gene.
+    Parses a TSV file created by the Ensembl Expression Atlas:
+    Gene Name is the second column, followed by the TPMs in each tissue.
+    Provided tissue must match one of the tissues listed in the header of expression_data.
 
     arguments:
-    - expression_data: path to the TSV file with expression data with columns:
-        ENSG, tissue_expression_ratio, gene name, other columns
+    - expression_data: path to the TSV file from Expression Atlas
+    - tissue: string, tissue of interest.
 
     returns:
-    - gene2enrichment: dict, key=gene name, value=tissue enrichment
+    - gene2enrichment: dict, key=gene name, value=tissue enrichment, ie TPM in tissue divided
+      by average TPM in all tissues.
     """
     gene2enrichment = {}
 
@@ -97,22 +97,42 @@ def parse_expression_data(expression_data):
         raise Exception("cannot open provided expression file")
 
     line = f.readline()
-    if not line.startswith("# Expression Atlas\t"):
+    if not line.startswith("# Expression Atlas"):
         raise Exception("Expression file problem")
         
+    # skip header comments
+    while line.startswith("#"):
+        line = f.readline()
+    # parse header
+    split_line = line.rstrip().split('\t')
+    if split_line[1] != 'Gene Name':
+        raise Exception("Expression file header: not gene name column")
+    tissueCol = -1
+    for i in range(2, len(split_line)):
+        if split_line[i] == tissue:
+            tissueCol = i
+            break
+    if tissueCol == -1:
+        raise Exception("Cannot find tissue in Expression file header")
+    nbTissues = len(split_line) - 2
+
+    # parse data lines
     for line in f:
-        # skip comments
-        if line.startswith("#"):
-            continue
-
-        # skip header
-        if line.startswith("Gene"):
-            continue
-
-        split_line = line.rstrip().split('\t', maxsplit=3)
-        (ENSG, tissue_ratio, gene, _) = split_line
-
-        gene2enrichment[gene] = float(tissue_ratio)
+        split_line = line.rstrip("\n").split("\t")
+        gene = split_line[1]
+        expTiss = split_line[tissueCol]
+        # use 0 for missing data
+        if expTiss == '':
+            expTiss = 0.0
+        else:
+            expTiss = float(expTiss)
+        expAverage = 0.0
+        for i in range(2, len(split_line)):
+            if split_line[i] != '':
+                expAverage += float(split_line[i])
+        expAverage /= nbTissues
+        tissue_ratio = expTiss / expAverage
+        gene2enrichment[gene] = tissue_ratio
     
     return(gene2enrichment)
 
@@ -325,7 +345,7 @@ def comparison_matrix_row(method, highest_scoring, tissue_enriched, non_tissue_e
 ########### MAIN ###########
 ############################
 
-def main(network_file, uniprot_file, gtex_file, BFWalk_scores_file,
+def main(network_file, uniprot_file, gtex_file, tissue, BFWalk_scores_file,
          multixrank_scores_file=None, netcore_scores_file=None,
          comparison_matrix_path="comparison_matrix.png",
          highest_scoring_threshold=10.0, enrichement_threshold=10.0,
@@ -348,7 +368,7 @@ def main(network_file, uniprot_file, gtex_file, BFWalk_scores_file,
     uniprot2gene = parse_uniprot(uniprot_file)
 
     logger.info("Parsing GTEx")
-    gene2enrichment = parse_expression_data(gtex_file)
+    gene2enrichment = parse_expression_data(gtex_file, tissue)
 
     protein2enrichment = {}
     for protein in interactome:
@@ -446,9 +466,12 @@ if __name__ == "__main__":
                         type=pathlib.Path,
                         required=True)
     parser.add_argument('--gtex',
-                        help="path to the TSV file with expression data with columns: " \
-                        "ENSG, tissue_expression_ratio, gene name, other columns",
+                        help="path to the TSV file with expression data from Expression Atlas",
                         type=pathlib.Path,
+                        required=True)
+    parser.add_argument('--tissue',
+                        help="name of tissue of interest (must be one of the tissues in GTEx file)",
+                        type=str,
                         required=True)
     parser.add_argument('--BFWalk_scores',
                         help="Path to the BFWalk scores file (TSV with header, columns: NODE, SCORE)",
@@ -494,6 +517,7 @@ if __name__ == "__main__":
         main(args.network,
              args.uniprot,
              args.gtex,
+             args.tissue,
              args.BFWalk_scores,
              multixrank_scores_file=args.multixrank_scores,
              netcore_scores_file=args.netcore_scores,

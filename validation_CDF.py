@@ -179,7 +179,7 @@ def ranks_to_curve(ranks, network_size):
     return(curve, AUC_norm)
 
 
-def plot_CDF(BFWalk_curve, BFWalk_AUC, random_curve, network_size, out="CDF.png",
+def plot_CDF(BFWalk_curve, BFWalk_AUC, random_curve, random_AUC, network_size, pheno="", out="CDF.png",
              multixrank_curve=None, multixrank_AUC=None, netcore_curve=None, netcore_AUC=None):
     x = range(network_size)
     matplotlib.pyplot.plot(x, BFWalk_curve, label="BFWalk (AUC={:.3f})".format(BFWalk_AUC), color="#D81B60")
@@ -187,10 +187,11 @@ def plot_CDF(BFWalk_curve, BFWalk_AUC, random_curve, network_size, out="CDF.png"
         matplotlib.pyplot.plot(x, multixrank_curve, label="MultiXrank (AUC={:.3f})".format(multixrank_AUC), color="#FFC107")
     if netcore_curve:
         matplotlib.pyplot.plot(x, netcore_curve, label="NetCore (AUC={:.3f})".format(netcore_AUC), color="#1E88E5")
-    matplotlib.pyplot.plot(x, random_curve, label="random classifier", color="#004D40")
+    matplotlib.pyplot.plot(x, random_curve, label="random classifier (AUC={:.3f})".format(random_AUC), color="#004D40")
 
     matplotlib.pyplot.xlabel("rank x", fontsize=12)
     matplotlib.pyplot.ylabel("Number of left-out genes where rank <= x", fontsize=12)
+    matplotlib.pyplot.title(pheno)
     matplotlib.pyplot.xticks(fontsize=11)
     matplotlib.pyplot.yticks(fontsize=11)
     matplotlib.pyplot.legend(loc='lower right', fontsize=12)
@@ -218,7 +219,7 @@ def format_pvalue(pvalue):
 
 
 def main(network_file, BFWalk_ranks_file, multixrank_ranks_file=None, netcore_LOO_dir=None,
-         cdf_path=None, weighted=False, directed=False):
+         cdf_path=None, pheno="", weighted=False, directed=False):
     
     logger.info(f"Parsing network {network_file}")
     (edge_list, node2idx, idx2node) = data_parser.parse_network(network_file, weighted, directed)
@@ -279,11 +280,23 @@ def main(network_file, BFWalk_ranks_file, multixrank_ranks_file=None, netcore_LO
     p_value_BFWalk_vs_netcore = scipy.stats.wilcoxon(list(netcore_node2rank.values()), list(BFWalk_node2rank.values()), alternative="greater").pvalue
     logger.info(f"p-value (ranks BFWalk vs NetCore): {format_pvalue(p_value_BFWalk_vs_netcore)}")
 
+    phenotype=""
+    if pheno == "MMAF":
+        phenotype = "MMAF"
+    elif pheno == "HYPCARD":
+        phenotype = "hypertrophic cardiomyopathy"
+    elif pheno == "CKD":
+        phenotype = "chronic kidney disease"
+    elif pheno == "DYSCHROM":
+        phenotype = "dyschromatopsia"
+
     cdf_path.parent.mkdir(parents=True, exist_ok=True)  # Path.parent of a bare filename returns Path("."), and mkdir on "."
     plot_CDF(BFWalk_curve=BFWalk_curve,
              BFWalk_AUC=BFWalk_AUC,
              random_curve=random_curve,
+             random_AUC=random_AUC,
              network_size=len(interactome.nodes()),
+             pheno=phenotype,
              out=cdf_path,
              **optional_kwargs)
 
@@ -329,6 +342,11 @@ if __name__ == "__main__":
                         type=pathlib.Path,
                         required=False,
                         default="CDF.png")
+    parser.add_argument('--pheno',
+                        help="Name of the phenotype (for plotting only)",
+                        type=str,
+                        required=False,
+                        default=""),
     parser.add_argument('--weighted',
                         help="Whether the network is weighted (default: False)",
                         action='store_true',
@@ -346,6 +364,7 @@ if __name__ == "__main__":
              multixrank_ranks_file=args.multixrank_ranks,
              netcore_LOO_dir=args.netcore_LOO_dir,
              cdf_path=args.cdf,
+             pheno=args.pheno,
              weighted=args.weighted,
              directed=args.directed)
 

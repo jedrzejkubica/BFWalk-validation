@@ -187,7 +187,7 @@ def plot_CDF(BFWalk_curve, BFWalk_AUC, random_curve, random_AUC, network_size, p
         matplotlib.pyplot.plot(x, multixrank_curve, label="MultiXrank (AUC={:.3f})".format(multixrank_AUC), color="#FFC107")
     if netcore_curve:
         matplotlib.pyplot.plot(x, netcore_curve, label="NetCore (AUC={:.3f})".format(netcore_AUC), color="#1E88E5")
-    matplotlib.pyplot.plot(x, random_curve, label="random classifier (AUC={:.3f})".format(random_AUC), color="#004D40")
+    matplotlib.pyplot.plot(x, random_curve, label="random (AUC={:.3f})".format(random_AUC), color="#004D40")
 
     matplotlib.pyplot.xlabel("rank x", fontsize=12)
     matplotlib.pyplot.ylabel("Number of left-out genes where rank <= x", fontsize=12)
@@ -289,6 +289,8 @@ def main(network_file, BFWalk_ranks_file, multixrank_ranks_file=None, netcore_LO
         phenotype = "chronic kidney disease"
     elif pheno == "DYSCHROM":
         phenotype = "dyschromatopsia"
+    else:
+        phenotype = pheno
 
     cdf_path.parent.mkdir(parents=True, exist_ok=True)  # Path.parent of a bare filename returns Path("."), and mkdir on "."
     plot_CDF(BFWalk_curve=BFWalk_curve,

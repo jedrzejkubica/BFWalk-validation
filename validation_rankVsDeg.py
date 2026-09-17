@@ -157,7 +157,7 @@ def plot_rankVsDeg(rank_diff, negative_rank_degrees, positive_rank_degrees, node
     ax.set_xlim(-(len(interactome)), len(interactome))
     ax.axvline(0, color='grey', linestyle='--', linewidth=1.5, zorder=2)
 
-    ax.set_xlabel(f"Rank diff (BFWalk rank - {other_method} rank)", fontsize=12)
+    ax.set_xlabel(f"Rank difference (BFWalk rank - {other_method} rank)", fontsize=12)
     ax.set_ylabel("Node degree", fontsize=12)
 
     ax.grid(True, linestyle='--', which='major',
@@ -218,26 +218,38 @@ def main(network_file, phenotypes, BFWalk_out_dir, multixrank_out_dir=None, netc
             multixrank_ranks_file = os.path.join(multixrank_out_dir, phenotype, "ranks_LOO.tsv")
             multixrank_node2rank_pheno = parse_ranks(multixrank_ranks_file)
             multixrank_node2rank.update(multixrank_node2rank_pheno)
-            assert len(BFWalk_node2rank) == len(multixrank_node2rank), "BFWalk and MultiXrank ranks files have different number of left-out nodes"
-            logger.info("BFWalk vs MultiXrank:")
-            (rank_diff, negative_rank_degrees, positive_rank_degrees, node_degrees) = calculate_rank_difference(BFWalk_node2rank,
-                                                                                                                multixrank_node2rank,
+            logger.info(f"BFWalk vs MultiXrank ({phenotype}):")
+            (rank_diff, negative_rank_degrees, positive_rank_degrees, node_degrees) = calculate_rank_difference(BFWalk_node2rank_pheno,
+                                                                                                                multixrank_node2rank_pheno,
                                                                                                                 interactome)
-            rankVsDeg_path = os.path.join(rankVsDeg_dir, "all_rank_vs_deg_BFWalk_vs_RWR.png")
-            plot_rankVsDeg(rank_diff, negative_rank_degrees, positive_rank_degrees, node_degrees, interactome, "RWR", rankVsDeg_path)
 
         if netcore_out_dir:
             logger.info("Parsing NetCore scores")
             netcore_LOO_dir = os.path.join(netcore_out_dir, phenotype)
             netcore_node2rank_pheno = netcore_scores_to_ranks(BFWalk_node2rank_pheno.keys(), netcore_LOO_dir, len(node2idx))
             netcore_node2rank.update(netcore_node2rank_pheno)
-            assert len(BFWalk_node2rank) == len(netcore_node2rank), "BFWalk and NetCore ranks files have different number of left-out nodes"
-            logger.info("BFWalk vs NetCore:")
-            (rank_diff, negative_rank_degrees, positive_rank_degrees, node_degrees) = calculate_rank_difference(BFWalk_node2rank,
-                                                                                                                netcore_node2rank,
+            logger.info(f"BFWalk vs NetCore ({phenotype}):")
+            (rank_diff, negative_rank_degrees, positive_rank_degrees, node_degrees) = calculate_rank_difference(BFWalk_node2rank_pheno,
+                                                                                                                netcore_node2rank_pheno,
                                                                                                                 interactome)
-            rankVsDeg_path = os.path.join(rankVsDeg_dir, "all_rank_vs_deg_BFWalk_vs_NetCore.png")
-            plot_rankVsDeg(rank_diff, negative_rank_degrees, positive_rank_degrees, node_degrees, interactome, "NetCore", rankVsDeg_path)
+
+    if multixrank_out_dir:
+        assert len(BFWalk_node2rank) == len(multixrank_node2rank), "BFWalk and MultiXrank ranks files have different number of left-out nodes"
+        logger.info(f"BFWalk vs MultiXrank (all phenotypes):")
+        (rank_diff, negative_rank_degrees, positive_rank_degrees, node_degrees) = calculate_rank_difference(BFWalk_node2rank,
+                                                                                                            multixrank_node2rank,
+                                                                                                            interactome)
+        rankVsDeg_path = os.path.join(rankVsDeg_dir, "all_rank_vs_deg_BFWalk_vs_RWR.png")
+        plot_rankVsDeg(rank_diff, negative_rank_degrees, positive_rank_degrees, node_degrees, interactome, "RWR", rankVsDeg_path)
+
+    if netcore_out_dir:
+        assert len(BFWalk_node2rank) == len(netcore_node2rank), "BFWalk and NetCore ranks files have different number of left-out nodes"
+        logger.info(f"BFWalk vs NetCore (all phenotypes):")
+        (rank_diff, negative_rank_degrees, positive_rank_degrees, node_degrees) = calculate_rank_difference(BFWalk_node2rank,
+                                                                                                            netcore_node2rank,
+                                                                                                            interactome)
+        rankVsDeg_path = os.path.join(rankVsDeg_dir, "all_rank_vs_deg_BFWalk_vs_NetCore.png")
+        plot_rankVsDeg(rank_diff, negative_rank_degrees, positive_rank_degrees, node_degrees, interactome, "NetCore", rankVsDeg_path)
 
     logger.info(f"Found {len(BFWalk_node2rank)} left-out nodes")
 

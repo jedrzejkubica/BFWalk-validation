@@ -150,6 +150,22 @@ def calculate_rank_difference(BFWalk_node2rank, other_method_node2rank, network)
     return(rank_diff, negative_rank_degrees, positive_rank_degrees, node_degrees)
 
 
+def top_percent(list, x):
+    """
+    Finds the top x% of values in a sorted list
+    
+    returns: 
+    - top: list with top x% of values
+    - rest: list with the rest of values
+    """
+    num_elements = round(len(list) * x/100)
+
+    top = list[:num_elements]
+    rest = list[num_elements:]
+    
+    return(top, rest)
+
+
 def plot_rankVsDeg(rank_diff, negative_rank_degrees, positive_rank_degrees, node_degrees, interactome, other_method, out):
     fig, ax = matplotlib.pyplot.subplots(figsize=(7, 6))
 
@@ -199,6 +215,11 @@ def main(network_file, phenotypes, BFWalk_out_dir, multixrank_out_dir=None, netc
     for node in interactome.nodes():
         network_degrees.append(interactome.degree(node))
     logger.info(f"interactome node degree mean: {round(statistics.mean(network_degrees))}, median: {round(statistics.median(network_degrees))}")
+
+    # calculate the max and min degree of hubs (top 5% of node degrees)
+    network_degrees_sorted = sorted(network_degrees, reverse=True)
+    (hubs_degrees, rest_degrees) = top_percent(network_degrees_sorted, 5)
+    logger.info(f"hubs degree max: {max(hubs_degrees)}, min: {min(hubs_degrees)}")
 
     # dicts to store node-rank pairs for all phenotypes combined
     BFWalk_node2rank = {}

@@ -241,6 +241,8 @@ def main(network_file, phenotypes, BFWalk_out_dir, multixrank_out_dir=None, netc
                                                                                                             interactome)
         rankVsDeg_path = os.path.join(rankVsDeg_dir, "all_rank_vs_deg_BFWalk_vs_RWR.png")
         plot_rankVsDeg(rank_diff, negative_rank_degrees, positive_rank_degrees, node_degrees, interactome, "RWR", rankVsDeg_path)
+        spearman_corr = numpy.corrcoef(list(BFWalk_node2rank.values()), list(multixrank_node2rank.values()))[0, 1]
+        logger.info(f"Spearman correlation rank vs degree (BFWalk and MultiXrank): {spearman_corr:.3f}")
 
     if netcore_out_dir:
         assert len(BFWalk_node2rank) == len(netcore_node2rank), "BFWalk and NetCore ranks files have different number of left-out nodes"
@@ -250,6 +252,8 @@ def main(network_file, phenotypes, BFWalk_out_dir, multixrank_out_dir=None, netc
                                                                                                             interactome)
         rankVsDeg_path = os.path.join(rankVsDeg_dir, "all_rank_vs_deg_BFWalk_vs_NetCore.png")
         plot_rankVsDeg(rank_diff, negative_rank_degrees, positive_rank_degrees, node_degrees, interactome, "NetCore", rankVsDeg_path)
+        spearman_corr = numpy.corrcoef(list(BFWalk_node2rank.values()), list(netcore_node2rank.values()))[0, 1]
+        logger.info(f"Spearman correlation rank vs degree (BFWalk and NetCore): {spearman_corr:.3f}")
 
     logger.info(f"Found {len(BFWalk_node2rank)} left-out nodes")
 

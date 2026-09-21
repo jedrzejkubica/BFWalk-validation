@@ -143,9 +143,9 @@ def calculate_rank_difference(BFWalk_node2rank, other_method_node2rank, network)
         else:
             positive_rank_degrees.append(node_degrees[i])
 
-    logger.info(f"absolute rank difference mean: {round(statistics.mean(rank_diff_abs))}, median: {round(statistics.median(rank_diff_abs))}")
-    logger.info(f"negative rank degree mean: {round(statistics.mean(negative_rank_degrees))}, median: {round(statistics.median(negative_rank_degrees))}")
-    logger.info(f"positive rank degree mean: {round(statistics.mean(positive_rank_degrees))}, median: {round(statistics.median(positive_rank_degrees))}")
+    logger.info(f"absolute rank differences mean: {round(statistics.mean(rank_diff_abs))}, median: {round(statistics.median(rank_diff_abs))}")
+    logger.info(f"negative rank degree mean: {round(statistics.mean(negative_rank_degrees))}, median: {round(statistics.median(negative_rank_degrees))}, max: {max(negative_rank_degrees)}")
+    logger.info(f"positive rank degree mean: {round(statistics.mean(positive_rank_degrees))}, median: {round(statistics.median(positive_rank_degrees))}, max: {max(positive_rank_degrees)}")
 
     return(rank_diff, negative_rank_degrees, positive_rank_degrees, node_degrees)
 
@@ -198,7 +198,7 @@ def main(network_file, phenotypes, BFWalk_out_dir, multixrank_out_dir=None, netc
     network_degrees = []
     for node in interactome.nodes():
         network_degrees.append(interactome.degree(node))
-    logger.info(f"node degree mean: {round(statistics.mean(network_degrees))}, median: {round(statistics.median(network_degrees))}")
+    logger.info(f"interactome node degree mean: {round(statistics.mean(network_degrees))}, median: {round(statistics.median(network_degrees))}")
 
     # dicts to store node-rank pairs for all phenotypes combined
     BFWalk_node2rank = {}
@@ -206,56 +206,50 @@ def main(network_file, phenotypes, BFWalk_out_dir, multixrank_out_dir=None, netc
     netcore_node2rank = {}
 
     for phenotype in phenotypes:
-        logger.info(f"Phenotype: {phenotype}")
-        logger.info("Parsing BFWalk ranks")
         # search all subdirectories of the BFWalk output directory for "ranks_LOO.tsv"
         BFWalk_ranks_file = os.path.join(BFWalk_out_dir, phenotype, "ranks_LOO.tsv")
         BFWalk_node2rank_pheno = parse_ranks(BFWalk_ranks_file)
         BFWalk_node2rank.update(BFWalk_node2rank_pheno)
 
         if multixrank_out_dir:
-            logger.info("Parsing MultiXrank ranks")
             multixrank_ranks_file = os.path.join(multixrank_out_dir, phenotype, "ranks_LOO.tsv")
             multixrank_node2rank_pheno = parse_ranks(multixrank_ranks_file)
             multixrank_node2rank.update(multixrank_node2rank_pheno)
-            logger.info(f"BFWalk vs MultiXrank ({phenotype}):")
+            logger.info(f"{phenotype}: BFWalk vs MultiXrank")
             (rank_diff, negative_rank_degrees, positive_rank_degrees, node_degrees) = calculate_rank_difference(BFWalk_node2rank_pheno,
                                                                                                                 multixrank_node2rank_pheno,
                                                                                                                 interactome)
 
         if netcore_out_dir:
-            logger.info("Parsing NetCore scores")
             netcore_LOO_dir = os.path.join(netcore_out_dir, phenotype)
             netcore_node2rank_pheno = netcore_scores_to_ranks(BFWalk_node2rank_pheno.keys(), netcore_LOO_dir, len(node2idx))
             netcore_node2rank.update(netcore_node2rank_pheno)
-            logger.info(f"BFWalk vs NetCore ({phenotype}):")
+            logger.info(f"{phenotype}: BFWalk vs NetCore")
             (rank_diff, negative_rank_degrees, positive_rank_degrees, node_degrees) = calculate_rank_difference(BFWalk_node2rank_pheno,
                                                                                                                 netcore_node2rank_pheno,
                                                                                                                 interactome)
 
     if multixrank_out_dir:
         assert len(BFWalk_node2rank) == len(multixrank_node2rank), "BFWalk and MultiXrank ranks files have different number of left-out nodes"
-        logger.info(f"BFWalk vs MultiXrank (all phenotypes):")
+        logger.info(f"all phenotypes: BFWalk vs MultiXrank")
         (rank_diff, negative_rank_degrees, positive_rank_degrees, node_degrees) = calculate_rank_difference(BFWalk_node2rank,
                                                                                                             multixrank_node2rank,
                                                                                                             interactome)
         rankVsDeg_path = os.path.join(rankVsDeg_dir, "all_rank_vs_deg_BFWalk_vs_RWR.png")
         plot_rankVsDeg(rank_diff, negative_rank_degrees, positive_rank_degrees, node_degrees, interactome, "RWR", rankVsDeg_path)
         spearman_corr = numpy.corrcoef(list(BFWalk_node2rank.values()), list(multixrank_node2rank.values()))[0, 1]
-        logger.info(f"Spearman correlation rank vs degree (BFWalk and MultiXrank): {spearman_corr:.3f}")
+        logger.info(f"Spearman's rank vs degree: {spearman_corr:.3f}")
 
     if netcore_out_dir:
         assert len(BFWalk_node2rank) == len(netcore_node2rank), "BFWalk and NetCore ranks files have different number of left-out nodes"
-        logger.info(f"BFWalk vs NetCore (all phenotypes):")
+        logger.info(f"all phenotypes: BFWalk vs NetCore")
         (rank_diff, negative_rank_degrees, positive_rank_degrees, node_degrees) = calculate_rank_difference(BFWalk_node2rank,
                                                                                                             netcore_node2rank,
                                                                                                             interactome)
         rankVsDeg_path = os.path.join(rankVsDeg_dir, "all_rank_vs_deg_BFWalk_vs_NetCore.png")
         plot_rankVsDeg(rank_diff, negative_rank_degrees, positive_rank_degrees, node_degrees, interactome, "NetCore", rankVsDeg_path)
         spearman_corr = numpy.corrcoef(list(BFWalk_node2rank.values()), list(netcore_node2rank.values()))[0, 1]
-        logger.info(f"Spearman correlation rank vs degree (BFWalk and NetCore): {spearman_corr:.3f}")
-
-    logger.info(f"Found {len(BFWalk_node2rank)} left-out nodes")
+        logger.info(f"Spearman's rank vs degree: {spearman_corr:.3f}")
 
 
 if __name__ == "__main__":

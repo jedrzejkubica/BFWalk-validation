@@ -5,7 +5,9 @@ This repository contains scripts for the validation of **[BFWalk](https://github
 
 ### Step 1. Run LOO CV for BFWalk
 
-We assume that BFWalk is installed as described in [BFWalk](https://github.com/jedrzejkubica/BFWalk) and that input data (interactome, seeds) is prepared as described in [BFWalk Interactome](https://github.com/jedrzejkubica/BFWalk/tree/main/Interactome). We provide the interactome and seeds for three studied phenotypes (dyschromatopsia, hypertrophic cardiomyopathy and chronic kidney disease) in [data/](data/). Scores (`scores_LOO.tsv`) and ranks (`ranks_LOO.tsv`) for the left-out genes will be saved in `--out`, logs will be in `log_LOO.txt`.
+We assume that BFWalk is installed as described in [BFWalk](https://github.com/jedrzejkubica/BFWalk) and that input data (interactome, seeds) is prepared as described in [BFWalk Interactome](https://github.com/jedrzejkubica/BFWalk/tree/main/Interactome). We provide a human interactome and seeds for which we evaluated BFWalk in [data/](data/). Phenotype-associated genes were downloaded from the Human Phenotype Ontology: for hypertrophic cardiomyopathy in December 2025, and for dyschromatopsia and chronic kidney disease in March 2026. Then these genes were mapped to proteins using UniProt as available in June 2026.
+
+Scores (`scores_LOO.tsv`) and ranks (`ranks_LOO.tsv`) for the left-out genes will be saved in `--out`, logs will be in `log_LOO.txt`.
 
 ```
 ( for PHENO in DYSCHROM HYPCARD CKD ; do
